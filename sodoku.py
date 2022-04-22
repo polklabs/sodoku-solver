@@ -51,8 +51,7 @@ def getPossibleOptions(puzzle, x, y):
     grid = possible.difference(set(grid))
 
     # Get all common possible items
-    options = list(row.intersection(column).intersection(grid))
-    options.sort()
+    options = row.intersection(column).intersection(grid)
     return options
 
 def isValidState(puzzle):
@@ -66,8 +65,7 @@ def isValidState(puzzle):
 def isComplete(puzzle):
     for x in range(9):
         for y in range(9):
-            options = getPossibleOptions(puzzle, x, y)
-            if len(options) <= 0 or puzzle[x][y] == ' ':
+            if puzzle[x][y] == ' ':
                 return False
     return True
 
@@ -85,7 +83,7 @@ def solve(puzzle):
     while True:
         while isValidState(puzzle):
             # Display -----------
-            printPuzzle(puzzle, steps, len(puzzleSnapshots), snapshotsTaken)
+            # printPuzzle(puzzle, steps, len(puzzleSnapshots), snapshotsTaken)
             # sleep(.25)
             # -------------------
 
@@ -96,29 +94,32 @@ def solve(puzzle):
             minX = -1
             minY = -1
             minOptions = ['']
-            while len(minOptions) == 1:
+            minOptLen = 1
+            while minOptLen == 1:
                 minX = -1
                 minY = -1
                 minOptions = ['']*10
+                minOptLen = 10
 
                 for x in range(9):
                     for y in range(9):
                         if puzzle[x][y] == ' ':
                             options = getPossibleOptions(puzzle, x, y)
-                            if len(options) < len(minOptions):
+                            if len(options) < minOptLen:
                                 minX = x
                                 minY = y
                                 minOptions = options
+                                minOptLen = len(minOptions)
 
                                 # if only 1 option then break x,y loop early and set the value
-                                if len(options) == 1:
+                                if minOptLen == 1:
                                     break
                     else:
                         continue
                     break
                 # Set cell w/ 1 option and continue loop
-                if len(minOptions) == 1:
-                    puzzle[minX][minY] = minOptions[0]
+                if minOptLen == 1:
+                    puzzle[minX][minY] = minOptions.pop()
 
             # We couldn't find any unfilled cells
             # break to check if solved
@@ -126,19 +127,24 @@ def solve(puzzle):
                 break
 
             # Take a snapshot if more than 1 option
-            if len(minOptions) > 1:
+            if minOptLen > 1:
                 # If we've exhausted all options then get previous snapshot
-                if len(minOptions) <= optionNum:
+                if minOptLen <= optionNum:
                     break
                 snapshotsTaken += 1
                 puzzleSnapshots.append(([row[:] for row in puzzle], optionNum))
+                
+                # Make sure options are always in the same order
+                minOptions = list(minOptions)
+                minOptions.sort()
                 puzzle[minX][minY] = minOptions[optionNum]
+                
                 optionNum = 0 # set back to 0 for next choice we come across
             else:
                 # No options left, check if solved
                 break
 
-        if isComplete(puzzle):
+        if isComplete(puzzle) and isValidState(puzzle):
             printPuzzle(puzzle, steps, len(puzzleSnapshots), snapshotsTaken)
             return puzzle
         else:
