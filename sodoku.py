@@ -1,16 +1,18 @@
 import os
 from time import sleep
-
-from pandas import array
+import re
 
 from Decorators import calculate_time
+
+# All possible items
+possible = set('123456789')
 
 # Load puzzle into memory
 def load(name):
     puzzle = []
     with open('puzzles/'+name, 'r') as f:
-        puzzle = f.read().replace('.', ' ').split('\n')
-        puzzle = [list(p) for p in puzzle]
+        puzzle = re.sub(r"[^1-9]", ' ', f.read().replace('\n',''))[:81]
+        puzzle = [list(puzzle[i:i + 9]) for i in range(0, len(puzzle), 9)]
     return puzzle
 
 def printPuzzle(puzzle, steps = 0, snapshots = 0, snapshotsTaken = 0):
@@ -28,13 +30,10 @@ def printPuzzle(puzzle, steps = 0, snapshots = 0, snapshotsTaken = 0):
     print('Steps:', steps)
     print('Snapshots:', snapshotsTaken, ' (', snapshots, ')')
 
-def getPossibleOptions(puzzle, x, y):
-    # All possible items
-    possible = set('123456789')
-    
+def getPossibleOptions(puzzle, x, y):    
     # Get all items in rows and columns excluding current cell
-    row = [puzzle[x][i] for i in range(len(puzzle[x])) if i != y]
-    column = [puzzle[i][y] for i in range(len(puzzle)) if i != x]
+    row = puzzle[x]
+    column = [r[y] for r in puzzle]
     
     # Get all items in grid excluding current cell
     grid = []
@@ -45,35 +44,40 @@ def getPossibleOptions(puzzle, x, y):
             if i != x or j != y:
                 grid.append(puzzle[i][j])
 
-    # Get all possible items that aren't already included
-    row = possible.difference(set(row))
-    column = possible.difference(set(column))
-    grid = possible.difference(set(grid))
+    # Get all invalid items
+    options = set().union(row, column, grid)
 
-    # Get all common possible items
-    options = row.intersection(column).intersection(grid)
-    return options
+    # Get all possible items
+    return possible.difference(options)
+
+# def getValidStates(puzzle):
+#     puzzleStates = []
+#     for x in range(9):
+#         row = []
+#         for y in range(9):
+#             options = []
+#             if puzzle[x][y] == ' ':
+#                 options.append(getPossibleOptions(puzzle, x, y))
+#             else:
+#                 options.append([puzzle[x][y]])
+#             row.append(options)
+#         puzzleStates.append(row)
+#     return puzzleStates
 
 def isValidState(puzzle):
     for x in range(9):
         for y in range(9):
-            options = getPossibleOptions(puzzle, x, y)
-            if len(options) <= 0 or (puzzle[x][y] != ' ' and puzzle[x][y] not in options):
-                return False
+            if puzzle[x][y] == ' ':
+                if len(getPossibleOptions(puzzle, x, y)) <= 0:
+                    return False
     return True
 
 def isComplete(puzzle):
-    for x in range(9):
-        for y in range(9):
-            if puzzle[x][y] == ' ':
-                return False
-    return True
+    return not any(' ' in row for row in puzzle)
 
 @calculate_time
 def solve(puzzle):
     puzzleSnapshots = []
-    # Which option to take if we have multiple
-    optionNum = 0
     
     # Metrics ---------
     steps = 0
@@ -128,18 +132,10 @@ def solve(puzzle):
 
             # Take a snapshot if more than 1 option
             if minOptLen > 1:
-                # If we've exhausted all options then get previous snapshot
-                if minOptLen <= optionNum:
-                    break
                 snapshotsTaken += 1
-                puzzleSnapshots.append(([row[:] for row in puzzle], optionNum))
-                
-                # Make sure options are always in the same order
                 minOptions = list(minOptions)
-                minOptions.sort()
-                puzzle[minX][minY] = minOptions[optionNum]
-                
-                optionNum = 0 # set back to 0 for next choice we come across
+                puzzleSnapshots.append([[row[:] for row in puzzle], (minX, minY), minOptions[1:]])
+                puzzle[minX][minY] = minOptions[0]
             else:
                 # No options left, check if solved
                 break
@@ -148,9 +144,13 @@ def solve(puzzle):
             printPuzzle(puzzle, steps, len(puzzleSnapshots), snapshotsTaken)
             return puzzle
         else:
-            # roll back to last snapshot and increment the option index to choose
-            (puzzle, optionNum) = puzzleSnapshots.pop()
-            optionNum += 1
+            # roll back to last snapshot and pick the next option
+            (puzzle, (x, y), options) = puzzleSnapshots[-1]
+            puzzle[x][y] = options[0]
+            if len(options) == 1:
+                puzzleSnapshots.pop()
+            else:
+                puzzleSnapshots[-1][2] = options[1:]
 
 puzzleName = 'puzzle5.txt'
 puzzle = load(puzzleName)
