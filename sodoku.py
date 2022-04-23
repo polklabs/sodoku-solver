@@ -50,28 +50,6 @@ def getPossibleOptions(puzzle, x, y):
     # Get all possible items
     return possible.difference(options)
 
-# def getValidStates(puzzle):
-#     puzzleStates = []
-#     for x in range(9):
-#         row = []
-#         for y in range(9):
-#             options = []
-#             if puzzle[x][y] == ' ':
-#                 options.append(getPossibleOptions(puzzle, x, y))
-#             else:
-#                 options.append([puzzle[x][y]])
-#             row.append(options)
-#         puzzleStates.append(row)
-#     return puzzleStates
-
-def isValidState(puzzle):
-    for x in range(9):
-        for y in range(9):
-            if puzzle[x][y] == ' ':
-                if len(getPossibleOptions(puzzle, x, y)) <= 0:
-                    return False
-    return True
-
 def isComplete(puzzle):
     return not any(' ' in row for row in puzzle)
 
@@ -85,7 +63,7 @@ def solve(puzzle):
     # -----------------
 
     while True:
-        while isValidState(puzzle):
+        while True:
             # Display -----------
             # printPuzzle(puzzle, steps, len(puzzleSnapshots), snapshotsTaken)
             # sleep(.25)
@@ -97,7 +75,7 @@ def solve(puzzle):
             # aka: fewest possible options but > 1
             minX = -1
             minY = -1
-            minOptions = ['']
+            minOptions = []
             minOptLen = 1
             while minOptLen == 1:
                 minX = -1
@@ -116,7 +94,7 @@ def solve(puzzle):
                                 minOptLen = len(minOptions)
 
                                 # if only 1 option then break x,y loop early and set the value
-                                if minOptLen == 1:
+                                if minOptLen == 1 or minOptLen == 0:
                                     break
                     else:
                         continue
@@ -140,7 +118,7 @@ def solve(puzzle):
                 # No options left, check if solved
                 break
 
-        if isComplete(puzzle) and isValidState(puzzle):
+        if isComplete(puzzle):
             printPuzzle(puzzle, steps, len(puzzleSnapshots), snapshotsTaken)
             return puzzle
         else:
@@ -152,6 +130,6 @@ def solve(puzzle):
             else:
                 puzzleSnapshots[-1][2] = options[1:]
 
-puzzleName = 'puzzle5.txt'
+puzzleName = 'puzzle9.txt'
 puzzle = load(puzzleName)
 solve(puzzle)
